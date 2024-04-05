@@ -4,7 +4,7 @@ cwd = getcwd()
 
 """ Beállítások, ha más lenne a forrás """
 txt_szeparator = "\t" # régebbieknél ;
-encoding = "ANSI"   # régebbiknél ANSI, de ha utf-8-bom konvertáld át utf-8-ra
+encoding = "UTF-8"   # régebbiknél ANSI, de ha utf-8-bom konvertáld át utf-8-ra
 """ Vége """
 
 start = False
@@ -176,6 +176,7 @@ def create_table(tabla_c, idx):
 
 for idx, tabla_class in enumerate(tablak_class):
     output_file.write(create_table(tabla_class, idx))
+output_file.close()
 
 end_time = time.perf_counter()
 meno_vonal(str(round(end_time-start_time, 4))+" mp")
