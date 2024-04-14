@@ -4,7 +4,7 @@ cwd = getcwd()
 
 """ Beállítások, ha más lenne a forrás """
 txt_szeparator = "\t" # régebbieknél ;
-encoding = "UTF-8"   # régebbiknél ANSI, de ha utf-8-bom konvertáld át utf-8-ra
+encoding = "utf-8"   # régebbiknél ANSI, de ha utf-8-bom konvertáld át utf-8-ra
 """ Vége """
 
 start = False
@@ -51,7 +51,7 @@ meno_vonal("Adatok betöltése")
 
 db_name = cwd.split("\\")[-1].strip("123456789_")  # mappanev
 output_file = f"{cwd}\\{db_name}.sql"  # teljes utvonal + file
-output_file = open(output_file, "w", encoding=encoding)  # file nyitas
+output_file = open(output_file, "w", encoding="utf-8")  # file nyitas
 
 tablak = [x.replace(".txt", "") for x in txt_fileok]  # .txt levagasa
 
@@ -95,13 +95,30 @@ class tabla:
                     typelist.append(["date", "-"])
             elif adat[0][oszlop].lstrip("-").isnumeric(): # int eset
                 negativ_egy = False
-                for sor in adat:
-                    if oszlop<=len(sor) and not sor[oszlop] == "" and not sor[oszlop] == "NULL":
-                        if int(sor[oszlop]) > len_max:
-                            if sor[oszlop] == "-1":
-                                negativ_egy = True
-                            len_max = int(sor[oszlop])
-                typelist.append(["int", self.int_resolve(len_max*2, negativ_egy)])
+                try:
+                    for sor in adat:
+                        if oszlop<=len(sor) and not sor[oszlop] == "" and not sor[oszlop] == "NULL":
+                            if int(sor[oszlop]) > len_max:
+                                if sor[oszlop] == "-1":
+                                    negativ_egy = True
+                                len_max = int(sor[oszlop])
+                    typelist.append(["int", self.int_resolve(len_max*2, negativ_egy)])
+                except ValueError:
+                    float_sep = None  # szeparátor keresése
+                    for sor in adat:
+                        if not float_sep:
+                            if "." in sor[oszlop]:
+                                float_sep = "."
+                            elif "," in sor[oszlop]:
+                                float_sep = ","
+                        else:
+                            continue
+
+                    for idz, sor in enumerate(adat):  # replace szeparátor által
+                        if oszlop <= len(sor) and not sor[oszlop] == "" and not sor[oszlop] == "NULL":
+                            self.adat[idz][oszlop] = str(float(sor[oszlop].replace(float_sep, ".")))
+                    typelist.append(["int", "float(0)"])
+
             else:
                 error("nincs ilyen tipus:( vagy üres az első sor valamelyik eleme")
         return typelist
@@ -110,7 +127,10 @@ class tabla:
         self.utvonal = telj_utvonal
         self.nev = telj_utvonal.split("\\")[-1]
         self.file = open(self.utvonal, encoding=encoding)
-        self.fejlec = self.file.readline().strip().split(txt_szeparator)
+        try:
+            self.fejlec = self.file.readline().strip().split(txt_szeparator)
+        except:
+            error("Hiba a beolvasásnál, valószínű rossz kódolás van beállítva!")
         self.datumpont = False
         self.adat = []
         for sor in self.file:
@@ -165,7 +185,11 @@ def create_table(tabla_c, idx):
         for idy, oszlop in enumerate(sor):
             if not oszlop == "":
                 if idy in non_int_idx:
-                    sor_lista.append("'" + oszlop + "'")
+                    if not "\'" in oszlop:
+                        sor_lista.append("'" + oszlop + "'")
+                    else:
+                        sor_lista.append("'" + oszlop.replace("\'", "\\\'") + "'")
+
                 else:
                     sor_lista.append(oszlop)
             else:
